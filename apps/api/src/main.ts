@@ -14,6 +14,7 @@ import {mkdir, readdir} from 'fs/promises';
 import {makeTry} from "make-try";
 import {promisify} from "util";
 import {exec} from "child_process";
+import {formatTestCase} from "./ util/formatTestCase";
 export const run = makeTry(promisify(exec));
 
 const app = express();
@@ -63,7 +64,7 @@ const buildCpp = async (folderPath: string): Promise<BuildResult> => {
     return {
       result: 'fail',
       path: folderPath,
-      reason: result.err as string
+      reason: (result.err as {stderr: string}).stderr,
     }
   }
 
@@ -87,7 +88,7 @@ app.post('/upload', async (req, res) => {
   try {
     await mkdir(uploadFolderPath);
   } catch (err) {
-    res.status(500).send(err);
+    res.status(200).send(err);
   }
 
   await Promise.all(files.map(async file => {
@@ -101,7 +102,9 @@ app.post('/upload', async (req, res) => {
   const build = await buildCpp(uploadFolderPath);
 
   if(build.result === 'fail'){
-    res.status(400).send(build.reason);
+    res.status(200).send({
+      reason: build.reason
+    });
     return;
   }
 
@@ -114,6 +117,7 @@ app.post('/upload', async (req, res) => {
 
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
+
 app.post('/test/single', async (req, res) => {
 
   const {input, output, resourceId} = req.body;
@@ -121,10 +125,29 @@ app.post('/test/single', async (req, res) => {
 
   const result = await run(`${exeFile} ${input}`);
 
-  console.log(result.result);
+  if(result.hasError || result?.result.stderr !== ''){
+    res.status(200).send({
+      result: 'fail',
+      reason: result?.result.stderr ?? ''
+    });
+    return;
+  }
 
+  const target = formatTestCase(result.result.stdout.toString());
+  const answer = formatTestCase(output);
 
-  res.sendStatus(200);
+  if(target === answer) {
+    return res.status(200).send({
+      result: 'success',
+      target,
+      answer,
+    });
+  }
+
+  res.status(200).send({
+    result: 'fail',
+    reason: `not match \ntarget=${target}\nanswer=${answer}`
+  });
 })
 
 const port = process.env.port || 3333;

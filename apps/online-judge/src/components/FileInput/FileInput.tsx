@@ -1,65 +1,52 @@
 // @flow
 import * as React from 'react';
 import {Dashboard} from "@uppy/react";
-import Uppy from "@uppy/core";
+import Uppy, {FailedUppyFile, UploadedUppyFile} from "@uppy/core";
 import XHRUpload from "@uppy/xhr-upload";
 import '@uppy/core/dist/style.css';
 import '@uppy/dashboard/dist/style.css'
-import {makeTry} from "make-try";
-import {BuildResponse} from "@online-judge/domain";
-import {apiService} from "../../service/ApiService";
+import {useEffect, useMemo} from "react";
 
 type Props = {
-
+  onUploadSuccess: (response: FailedUppyFile<Record<string, unknown>, Record<string, unknown>> | UploadedUppyFile<Record<string, unknown>, Record<string, unknown>>) => void;
+  uppyId: string;
 };
 
-const uppyInstance = new Uppy({
-  id: 'files',
-  restrictions: {
-    allowedFileTypes: [
-      '.cpp',
-      '.h',
-      '.hpp',
-      '.c'
-    ]
-  },
-}).use(XHRUpload, {
-  endpoint: 'http://localhost:3333/upload',
-  bundle: true,
-  fieldName: 'file',
-  formData: true,
-});
+export const FileInput = ({onUploadSuccess, uppyId}: Props) => {
 
-const runTestCase = makeTry(async (params: {
-  resourceId: string;
-  input: string;
-  output: string;
-}) => {
-  const result = await apiService.runTestCaseWithIO(params);
-  return result;
-}, {
-  abort: true,
-})
+  const uppyInstance = useMemo(() => {
+    return new Uppy({
+      id: uppyId,
+      restrictions: {
+        allowedFileTypes: [
+          '.cpp',
+          '.h',
+          '.hpp',
+          '.c'
+        ]
+      },
+    }).use(XHRUpload, {
+      endpoint: 'http://localhost:3333/upload',
+      bundle: true,
+      fieldName: 'file',
+      formData: true,
+    });
+  }, [uppyId])
 
+  useEffect(() => {
+    uppyInstance.on('complete', (result) => {
+      if(result.failed.length > 0){
+        onUploadSuccess(result.failed[0]);
+        return;
+      }
 
-uppyInstance.on('upload-success', async (file, response) => {
-  const body = response.body as BuildResponse;
+      onUploadSuccess(result.successful[0])
+    })
 
-  runTestCase.abort();
-
-  const {result, err, hasError} = await runTestCase({
-    resourceId: body.resourceId,
-    input: '',
-    output: ''
-  });
-
-  console.log(result);
-})
-
-export const FileInput = (props: Props) => {
-  // React.useEffect(() => {
-    // return () => uppy.close({ reason: 'unmount' })
-  // }, [uppy])
+    return () => {
+      uppyInstance.off('complete', () => {});
+    }
+  }, [onUploadSuccess, uppyInstance]);
 
 
   return <Dashboard

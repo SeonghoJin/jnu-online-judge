@@ -12,7 +12,6 @@ export const AutoSaveTextArea = ({saveId, onError, style}: Props) => {
   const [text, setText] = useState(() => {
     try {
       const text = localStorage.getItem(saveId);
-      console.log(text);
       return text ?? '';
     } catch (e) {
       onError('[Error] text is not string, initializing ');

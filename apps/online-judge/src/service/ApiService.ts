@@ -1,4 +1,6 @@
 import {HttpService, httpService} from "./HttpService";
+import {makeTry} from "make-try";
+import {SingleTestIORequest, SingleTestIOResponse} from "@online-judge/domain";
 
 export class ApiService {
   private httpService: HttpService;
@@ -7,22 +9,15 @@ export class ApiService {
     this.httpService = httpService;
   }
 
-  runTestCaseWithIO = async (params: {
-    input: string;
-    output: string;
-    resourceId: string;
-  }) => {
-    try {
-      const result = await this.httpService.post('http://localhost:3333/test/single', {
-        input: params.input,
-        output: params.output,
-        resourceId: params.resourceId
-      });
-      console.log(result);
-    } catch (err) {
-      console.warn(err);
-    }
-  }
+  runTestCaseWithIO = makeTry(async (params: SingleTestIORequest) => {
+    return await this.httpService.post<SingleTestIOResponse>('http://localhost:3333/test/single', {
+      input: params.input,
+      output: params.output,
+      resourceId: params.resourceId
+    });
+  }, {
+    abort: true
+  })
 }
 
 export const apiService = new ApiService(httpService);

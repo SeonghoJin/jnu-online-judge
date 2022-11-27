@@ -30,8 +30,26 @@ export type BuildFail = {
  path: string;
 }
 
-export type BuildResponse = {
+export type BuildSuccessResponse = {
   resourceId: string;
+};
+
+export type BuildFailResponse = {
+  reason: string;
+};
+
+export type BuildResponse = BuildSuccessResponse | BuildFailResponse;
+
+export const isBuildSuccessResponse = (obj: any): obj is BuildSuccessResponse => {
+  if(obj === null){
+    return false;
+  }
+
+  if(typeof obj === 'object' && obj.resourceId){
+      return true;
+  }
+
+  return false;
 }
 
 export type SingleTestIORequest = {
@@ -39,5 +57,19 @@ export type SingleTestIORequest = {
   input: string;
   output: string;
 }
+
+export type SingleTestIOSuccessResponse = {
+  answer: string;
+  target: string;
+  result: 'success',
+}
+
+export type SingleTestIOFailResponse = {
+  result: 'fail',
+  reason: string;
+}
+
+export type SingleTestIOResponse = SingleTestIOSuccessResponse | SingleTestIOFailResponse;
+
 
 export type BuildResult = BuildFail | BuildSuccess;
