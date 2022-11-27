@@ -1,0 +1,20 @@
+#pragma once
+// DayOfYear.h
+
+class DayOfYear {
+	int month;
+	int day;
+public:
+	int getMonth();
+	int getDay();
+
+	void setMonth(int month);
+	void setDay(int day);
+
+
+
+
+};th() << "/" << today.getDay() << endl;
+
+	return 0;
+}
