@@ -1,0 +1,85 @@
+{
+  "name": "online-judge",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/online-judge/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nrwl/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "compiler": "babel",
+        "outputPath": "dist/apps/online-judge",
+        "index": "apps/online-judge/src/index.html",
+        "baseHref": "/",
+        "main": "apps/online-judge/src/main.tsx",
+        "polyfills": "apps/online-judge/src/polyfills.ts",
+        "tsConfig": "apps/online-judge/tsconfig.app.json",
+        "assets": [
+          "apps/online-judge/src/favicon.ico",
+          "apps/online-judge/src/assets"
+        ],
+        "styles": ["apps/online-judge/src/styles.scss"],
+        "scripts": [],
+        "webpackConfig": "@nrwl/react/plugins/webpack"
+      },
+      "configurations": {
+        "development": {
+          "extractLicenses": false,
+          "optimization": false,
+          "sourceMap": true,
+          "vendorChunk": true
+        },
+        "production": {
+          "fileReplacements": [
+            {
+              "replace": "apps/online-judge/src/environments/environment.ts",
+              "with": "apps/online-judge/src/environments/environment.prod.ts"
+            }
+          ],
+          "optimization": true,
+          "outputHashing": "all",
+          "sourceMap": false,
+          "namedChunks": false,
+          "extractLicenses": true,
+          "vendorChunk": false
+        }
+      }
+    },
+    "serve": {
+      "executor": "@nrwl/webpack:dev-server",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "online-judge:build",
+        "hmr": true,
+        "proxyConfig": "apps/online-judge/proxy.conf.json"
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "online-judge:build:development"
+        },
+        "production": {
+          "buildTarget": "online-judge:build:production",
+          "hmr": false
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["apps/online-judge/**/*.{ts,tsx,js,jsx}"]
+      }
+    },
+    "test": {
+      "executor": "@nrwl/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "apps/online-judge/jest.config.ts",
+        "passWithNoTests": true
+      }
+    }
+  },
+  "tags": []
+}
