@@ -7,8 +7,10 @@ import {
   SingleTestIORequest,
   SingleTestIOResponse
 } from "@online-judge/domain";
-import {RunMultipleTestCaseRequest} from "../../../../libs/domain/src/lib/RunMultipleTestCaseRequest";
-import {RunMultipleTestCaseResponse} from "../../../../libs/domain/src/lib/RunMultipleTestCaseResponse";
+import {RunMultipleTestCaseRequest} from "@online-judge/domain";
+import {RunMultipleTestCaseResponse} from "@online-judge/domain";
+import {RunTaMultipleTestCaseResponse} from "@online-judge/domain";
+import {RunTaMultipleTestCaseRequest} from "@online-judge/domain";
 
 export class ApiService {
   private httpService: HttpService;
@@ -35,6 +37,10 @@ export class ApiService {
 
   runMultiTestCase = async (params: RunMultipleTestCaseRequest) => {
     return await this.httpService.post<RunMultipleTestCaseResponse>(`http://localhost:3333/${api.테스트여러개}`, params);
+  }
+
+  runTaMultiTestCases = async (params: RunTaMultipleTestCaseRequest) => {
+    return await this.httpService.post<RunTaMultipleTestCaseResponse>(`http://localhost:3333/${api.TA테스트여러개유저하나}`, params)
   }
 }
 

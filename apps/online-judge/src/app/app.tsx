@@ -8,6 +8,7 @@ import styles from './app.module.scss';
 import Navigation from "../components/Navigation";
 import {CustomSingleTest} from "../components/CustomSingleTest/CustomSingleTest";
 import CustomMultiTest from "../components/CustomMultiTest";
+import ScoringTest from "../components/ScoringTest";
 
 export function App() {
   const [selectedTab, setSelectedTab] =  useState<ScoreView>('single');
@@ -21,6 +22,7 @@ export function App() {
         <SelectTab onSelected={setSelectedTab}/>
         {selectedTab === 'single' && <CustomSingleTest/>}
         {selectedTab === 'multi' && <CustomMultiTest/>}
+        {selectedTab === 'ta-score' && <ScoringTest/>}
       </MainLayout>
     </div>
   );
