@@ -2,14 +2,17 @@
 import * as React from 'react';
 import AutoSaveTextArea from "../AutoSaveTextArea";
 import {FileInput} from "../FileInput/FileInput";
-import {api, FailOrSuccess, UploadMultiTestResponse} from "@online-judge/domain";
+import {
+  api,
+  FailOrSuccess,
+  UploadMultiTestResponse,
+  RunMultipleTestCaseRequest
+} from "@online-judge/domain";
 import {useState} from "react";
 import {useLocalStorageState} from "../../hooks/useAutoSaveState";
 import ScoreResult from "../ScoreResult";
 import {fail} from "assert";
 import {apiService} from "../../service/ApiService";
-import {updateKarmaConf} from "@nrwl/workspace";
-import {RunMultipleTestCaseRequest} from "../../../../../libs/domain/src/lib/RunMultipleTestCaseRequest";
 
 export const CustomMultiTest = () => {
   const [testCases, setTestCases] = useLocalStorageState<{

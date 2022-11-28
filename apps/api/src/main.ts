@@ -223,6 +223,7 @@ const runTestCase = async (params : {
   if(target === answer) {
     return {
       status: 'success',
+      info: `${params.resourceId} success`,
       target,
       answer,
     } as const;
