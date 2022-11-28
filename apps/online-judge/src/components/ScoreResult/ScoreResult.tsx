@@ -1,17 +1,16 @@
 // @flow
 import * as React from 'react';
 import {useMemo} from "react";
+import {BuildResult} from "../BuildResult/BuildResult";
+import {FailOrSuccess} from "@online-judge/domain";
+import TestCaseResult from "../TestCasesResult";
+import TestResult from "../TestResult";
 
 type Props = {
-  build?: {
-    status: boolean;
-    reason?: string;
-  };
-  testCases?: {
-    status: boolean;
-    reason?: string;
-  };
-  test?: {
+  build?: FailOrSuccess | FailOrSuccess[];
+  testCases?: FailOrSuccess | FailOrSuccess[];
+  test?: FailOrSuccess | FailOrSuccess[];
+  upload?: {
     status: boolean;
     reason?: string;
   };
@@ -19,35 +18,34 @@ type Props = {
 
 export const ScoreResult = (props: Props) => {
 
-  const buildResult = useMemo(() => {
-    if(props?.build === undefined){
-    return <></>
-    }
-
-    return <>{`[Build] ${props?.build.status ? 'success' : 'fail'}`} <br/>{`${props?.build.reason ? "원인: " + props?.build.reason: ''}`}</>;
-  }, [props?.build]);
-
-  const testCases = useMemo(() => {
-    if(props?.testCases === undefined){
-      return ''
-    }
-
-    return `[TestCase] ${props?.testCases.status? 'success' : 'empty'} \n${props?.testCases.reason ? "원인" + props?.testCases.reason: ''}`;
-  }, [props?.testCases]);
-
-  const test = useMemo(() => {
-    if(props?.test === undefined){
+  const uploadResult = useMemo(() => {
+    if(props?.upload === undefined){
       return <></>
     }
 
-    return <>{`[Test] ${props?.test.status ? 'success' : 'fail'}`} <br/>{`${props?.test.reason ? "원인: " + props?.test.reason: ''}`}</>;
+    return <>{`[Upload] ${props?.upload.status ? 'success' : 'fail'}`} <br/>{`${props?.upload.reason ? "원인: " + props?.upload.reason: ''}`}</>;
+  }, [props?.upload]);
+
+
+  const buildResult = useMemo(() => {
+    return <BuildResult data={props?.build}/>
+  }, [props?.build]);
+
+  const testCases = useMemo(() => {
+    return <TestCaseResult data={props?.testCases}/>
+  }, [props?.testCases]);
+
+  const test = useMemo(() => {
+    return <TestResult data={props?.test}/>
   }, [props?.test]);
 
   return (
     <div>
-      {buildResult}
+      {uploadResult}
       <br/>
       {testCases}
+      <br/>
+      {buildResult}
       <br/>
       {test}
     </div>

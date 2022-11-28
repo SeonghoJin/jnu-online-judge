@@ -10,28 +10,25 @@ import {useEffect, useMemo} from "react";
 type Props = {
   onUploadSuccess: (response: FailedUppyFile<Record<string, unknown>, Record<string, unknown>> | UploadedUppyFile<Record<string, unknown>, Record<string, unknown>>) => void;
   uppyId: string;
+  uploadUrl: string;
+  allowedFileTypes: string[]
 };
 
-export const FileInput = ({onUploadSuccess, uppyId}: Props) => {
+export const FileInput = ({onUploadSuccess, uppyId, uploadUrl, allowedFileTypes}: Props) => {
 
   const uppyInstance = useMemo(() => {
     return new Uppy({
       id: uppyId,
       restrictions: {
-        allowedFileTypes: [
-          '.cpp',
-          '.h',
-          '.hpp',
-          '.c'
-        ]
+        allowedFileTypes: allowedFileTypes
       },
     }).use(XHRUpload, {
-      endpoint: 'http://localhost:3333/upload',
+      endpoint: `http://localhost:3333/${uploadUrl}`,
       bundle: true,
       fieldName: 'file',
       formData: true,
     });
-  }, [uppyId])
+  }, [allowedFileTypes, uploadUrl, uppyId])
 
   useEffect(() => {
     uppyInstance.on('complete', (result) => {

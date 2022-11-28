@@ -15,6 +15,13 @@ export const isScoreViewType = (value: unknown) : value is ScoreView => {
   return value === 'multi' || value === 'single' || value === 'ta-score';
 }
 
+export type UploadMultiTestResponse = {
+  resources: {
+    folderName: string;
+    testName: string;
+  }[];
+}
+
 export type BuildRequest = {
   path: string;
 }
@@ -58,18 +65,41 @@ export type SingleTestIORequest = {
   output: string;
 }
 
-export type SingleTestIOSuccessResponse = {
+export type SingleTestIOSuccessResponse = Success & {
   answer: string;
   target: string;
-  result: 'success',
 }
 
-export type SingleTestIOFailResponse = {
-  result: 'fail',
-  reason: string;
-}
+export type SingleTestIOFailResponse = Fail
 
 export type SingleTestIOResponse = SingleTestIOSuccessResponse | SingleTestIOFailResponse;
 
 
 export type BuildResult = BuildFail | BuildSuccess;
+
+export type Fail = {
+  status: 'fail',
+  reason?: string;
+}
+
+export type Success = {
+  status: 'success'
+  info?: string;
+}
+
+export type FailOrSuccess = Fail | Success;
+
+export type MultiTestBuildRequest = {
+  buildFolderPaths: string[];
+}
+
+export type MultiTestBuildResponse = {
+  fails: (BuildFail & {
+    resourceId: string;
+    testCaseName: string;
+  })[];
+  successes: (BuildSuccess & {
+    resourceId: string;
+    testCaseName: string;
+  })[];
+};

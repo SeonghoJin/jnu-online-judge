@@ -9,12 +9,17 @@ import * as cors from 'cors';
 import * as fileUpload from 'express-fileupload';
 import * as morgan from 'morgan';
 import {UploadedFile} from "express-fileupload";
-import {BuildResult} from "@online-judge/domain";
-import {mkdir, readdir} from 'fs/promises';
+import {BuildFail, BuildResult, BuildSuccess, Fail, Success} from "@online-judge/domain";
+import {mkdir, readdir, rename} from 'fs/promises';
 import {makeTry} from "make-try";
 import {promisify} from "util";
 import {exec} from "child_process";
 import {formatTestCase} from "./ util/formatTestCase";
+import {api} from "@online-judge/domain";
+export const moveFile = rename;
+import * as AdmZip from 'adm-zip';
+import {RunMultipleTestCaseRequest} from "../../../libs/domain/src/lib/RunMultipleTestCaseRequest";
+import {RunMultipleTestCaseResponse} from "../../../libs/domain/src/lib/RunMultipleTestCaseResponse";
 export const run = makeTry(promisify(exec));
 
 const app = express();
@@ -74,14 +79,24 @@ const buildCpp = async (folderPath: string): Promise<BuildResult> => {
   };
 }
 
+const buildCpps = async (folderPaths: string[]) => {
+  return await Promise.all(folderPaths.map(folderPath => buildCpp(folderPath)));
+}
 
-app.post('/upload', async (req, res) => {
+app.post("/"+api.테스트하나업로드, async (req, res) => {
 
   if(!req.files || Object.keys(req.files).length === 0){
     return res.status(400).send('No files were uploaded.');
   }
 
-  const files = req.files.file as UploadedFile[];
+  const files = (() => {
+    if(Array.isArray(req.files.file)) {
+      return req.files.file;
+    }
+
+    return [req.files.file];
+  })() as UploadedFile[];
+
   const resourceId = Date.now();
   const uploadFolderPath = `${rootPath}/static/${resourceId}`;
 
@@ -115,43 +130,146 @@ app.post('/upload', async (req, res) => {
   }
 });
 
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.post(`/${api.빌드여러개}`, async (req, res) => {
+  const { folderNames } = req.body;
 
+  const folderPaths = folderNames.map((folderName) => `${rootPath}/static/${folderName}`) as string[];
 
-app.post('/test/single', async (req, res) => {
+  const buildResults = await buildCpps(folderPaths);
 
-  const {input, output, resourceId} = req.body;
-  const exeFile = `${rootPath}/static/${resourceId}/build`;
+  const fails = buildResults.filter(({result}) => result === 'fail')
+    .map((result) => ({
+      ...result,
+      path: undefined,
+      resourceId: result.path.split('/').at(-1)
+    }));
 
-  const result = await run(`${exeFile} ${input}`);
+  const successes = buildResults.filter(({result}) => result === 'success')
+    .map((result) => ({
+      resourceId: result.path.split('/').at(-1)
+    }));
 
-  if(result.hasError || result?.result.stderr !== ''){
+  res.status(200).send({
+    fails,
+    successes
+  });
+})
+
+app.post("/"+api.테스트여러개업로드, async (req, res) => {
+
+  if(!req.files || Object.keys(req.files).length === 0){
+    return res.status(400).send('No files were uploaded.');
+  }
+
+  const file = req.files.file as UploadedFile;
+  const resourceId = Date.now();
+  const uploadFolderPath = `${rootPath}/static/${resourceId}`;
+
+  if("data" in file) {
+    const zipFile = new AdmZip(file.data);
+    zipFile.extractAllTo(uploadFolderPath, true);
+    const testCaseFolderPaths = await readdir(uploadFolderPath);
+
+    const resources = testCaseFolderPaths.map((testCaseFolderPath) => {
+      return {
+        folderName: `${resourceId}${testCaseFolderPath}`,
+        testName: testCaseFolderPath
+      };
+    });
+
+    const moveFolderInfos = testCaseFolderPaths.map((path) => ({
+      oldPath: `${uploadFolderPath}/${path}`,
+      newPath: `${rootPath}/static/${resourceId}${path}`
+    }));
+
+    await Promise.all(
+      moveFolderInfos.map(({ oldPath, newPath}) =>
+      moveFile(oldPath, newPath)
+    ));
+
     res.status(200).send({
-      result: 'fail',
-      reason: result?.result.stderr ?? ''
+      resources
     });
     return;
   }
 
-  const target = formatTestCase(result.result.stdout.toString());
-  const answer = formatTestCase(output);
+  res.status(200).send({
+    reason: 'upload fail'
+  });
 
-  if(target === answer) {
-    return res.status(200).send({
-      result: 'success',
-      target,
-      answer,
-    });
+});
+
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+
+const runTestCase = async (params : {
+  exeFile: string;
+  input: string;
+  output: string;
+  resourceId: string;
+}) => {
+
+  const result = await run(`${params.exeFile} ${params.input} << EOF`);
+
+  if(result.hasError || result?.result.stderr !== ''){
+    return {
+      status: 'fail',
+      reason: result?.result.stderr ?? ''
+    } as const;
   }
 
-  res.status(200).send({
-    result: 'fail',
-    reason: `not match \ntarget=${target}\nanswer=${answer}`
+  const target = formatTestCase(result.result.stdout.toString());
+  const answer = formatTestCase(params.output);
+
+  if(target === answer) {
+    return {
+      status: 'success',
+      target,
+      answer,
+    } as const;
+  }
+
+  return {
+    status : 'fail',
+    reason: `not match path=${params.resourceId} \n\ntarget=${target}\nanswer=${answer}`
+  } as const;
+}
+
+app.post('/' + api.테스트하나, async (req, res) => {
+
+  const {input, output, resourceId} = req.body;
+  const exeFile = `${rootPath}/static/${resourceId}/build`;
+  const testCaseResult = await runTestCase({
+    resourceId,
+    input,
+    output,
+    exeFile
   });
+
+  res.status(200).send(testCaseResult);
+})
+
+app.post('/' +api.테스트여러개, async (req, res) => {
+  const requests = req.body as RunMultipleTestCaseRequest;
+
+  const testResult = await Promise.all(requests.map(request => runTestCase({
+    input: request.input,
+    output: request.output,
+    exeFile: `${rootPath}/static/${request.resourceId}/build`,
+    resourceId: request.resourceId,
+  })));
+
+  const response: RunMultipleTestCaseResponse = {
+    successes: testResult.filter((test) => test.status === 'success') as Success[],
+    fails: testResult.filter((test) => test.status === 'fail') as Fail[]
+  }
+
+  res.status(200).send(response);
 })
 
 const port = process.env.port || 3333;
+
 const server = app.listen(port, () => {
   console.log(`Listening at http://localhost:${port}/api`);
 });
+
 server.on('error', console.error);

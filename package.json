@@ -9,6 +9,7 @@
   },
   "private": true,
   "dependencies": {
+    "@types/adm-zip": "^0.5.0",
     "@types/axios": "^0.14.0",
     "@types/express-fileupload": "^1.4.1",
     "@uppy/core": "^3.0.4",
@@ -19,6 +20,7 @@
     "@uppy/react": "^3.0.2",
     "@uppy/tus": "^3.0.5",
     "@uppy/xhr-upload": "^3.0.4",
+    "adm-zip": "^0.5.9",
     "axios": "^1.2.0",
     "classnames": "^2.3.2",
     "core-js": "^3.6.5",

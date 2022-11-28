@@ -2,7 +2,7 @@
 import * as React from 'react';
 import AutoSaveTextArea from "../AutoSaveTextArea";
 import {FileInput} from "../FileInput/FileInput";
-import {BuildResponse, isBuildSuccessResponse} from "@online-judge/domain";
+import {api, BuildResponse, FailOrSuccess, isBuildSuccessResponse} from "@online-judge/domain";
 import {apiService} from "../../service/ApiService";
 import ScoreResult from "../ScoreResult";
 import {useState} from "react";
@@ -12,8 +12,8 @@ type Props = {
 };
 
 export const CustomSingleTest = (props: Props) => {
-  const [buildResult, setBuildResult] = useState<undefined | {status: boolean, reason?: string}>(undefined);
-  const [testResult, setTestResult] = useState<undefined | {status: boolean, reason?: string}>(undefined);
+  const [buildResult, setBuildResult] = useState<undefined | FailOrSuccess | FailOrSuccess[]>(undefined);
+  const [testResult, setTestResult] = useState<undefined | FailOrSuccess | FailOrSuccess[]>(undefined);
 
   return (
     <>
@@ -36,6 +36,13 @@ export const CustomSingleTest = (props: Props) => {
         }}
       />
       <FileInput
+        allowedFileTypes={[
+          '.cpp',
+          '.h',
+          '.hpp',
+          '.c',
+        ]}
+        uploadUrl={api.테스트하나업로드}
         uppyId={'single-cpp-files'}
         onUploadSuccess={async ({response}) => {
           setBuildResult(undefined);
@@ -45,7 +52,7 @@ export const CustomSingleTest = (props: Props) => {
           if(isBuildSuccessResponse(body)) {
 
             setBuildResult({
-              status: true
+              status: 'success'
             });
 
             apiService.runTestCaseWithIO.abort();
@@ -56,17 +63,17 @@ export const CustomSingleTest = (props: Props) => {
               output: localStorage.getItem('single-output') ?? ''
             });
 
-            if(result?.data.result === 'fail'){
+            if(result?.data.status === 'fail'){
               setTestResult({
-                status: false,
+                status: 'fail',
                 reason: result.data.reason
               });
               return;
             }
 
-            if(result?.data.result === 'success') {
+            if(result?.data.status === 'success') {
               setTestResult({
-                status: true,
+                status: 'success',
               });
               return;
             }
@@ -75,7 +82,7 @@ export const CustomSingleTest = (props: Props) => {
           }
 
           setBuildResult({
-            status: false,
+            status: 'fail',
             reason: body.reason
           });
 
