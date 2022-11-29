@@ -18,7 +18,7 @@ import {
   Success,
   TestCase, UserTestCase
 } from "@online-judge/domain";
-import {mkdir, readdir, rename} from 'fs/promises';
+import {mkdir, readdir, rename, writeFile} from 'fs/promises';
 import {makeTry} from "make-try";
 import {promisify} from "util";
 import {exec} from "child_process";
@@ -241,13 +241,15 @@ const runTestCase = async (params : {
   output: string;
   resourceId: string;
 }): Promise<FailOrSuccess> => {
-
-  const result = await run(`${params.exeFile} ${params.input} << EOF`);
+  const writeInputFilePath = `${params.exeFile}--input-${Date.now()}`;
+  await writeFile(writeInputFilePath, params.input);
+  const result = await run(`${params.exeFile} < ${writeInputFilePath}`);
+  console.log(`${params.exeFile}`, 'command result', result);
 
   if(result.hasError || result?.result.stderr !== ''){
     return {
       status: 'fail',
-      reason: result?.result.stderr.toString() ?? ''
+      reason: result?.result?.stderr?.toString() ?? ''
     } ;
   }
 
@@ -303,7 +305,6 @@ app.post('/' +api.테스트여러개, async (req, res) => {
 
 export const unzipUserAssignment = async (userAssignmentFolderPath: string) => {
   const [zipFileName] = await readdir(userAssignmentFolderPath);
-  console.log(`${userAssignmentFolderPath}/${zipFileName}`)
   const zipFile = new AdmZip(`${userAssignmentFolderPath}/${zipFileName}`);
 
   const resourceId = Date.now();
@@ -334,14 +335,7 @@ export const checkTestCasesUserAssignment = async (params: {userTestCasesFolderP
 
 app.post('/' + api.TA테스트하나유저하나, async (req, res) => {
   const {folderName, ios, userName} = req.body as RunTaSingleTestCaseRequest;
-
   const userAssignmentPath = `${rootPath}/static/${folderName}`;
-  console.log(userAssignmentPath);
-  try {
-
-  } catch (e) {
-
-  }
 
   const {err, hasError, result: extractPath} = await makeTry(unzipUserAssignment)(userAssignmentPath);
 
@@ -388,13 +382,14 @@ app.post('/' + api.TA테스트하나유저하나, async (req, res) => {
 app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
   const {userName, folderName, testCases} = req.body as RunTaMultipleTestCaseRequest;
 
+  console.log(userName + 'start');
+
   const userAssignmentPath = `${rootPath}/static/${folderName}`;
   const testCasesFolderPath = await unzipUserAssignment(userAssignmentPath);
-
   const testCaseResult = await checkTestCasesUserAssignment({
     userTestCasesFolderPath: testCasesFolderPath, testCases
   });
-
+  console.log(userName, 'testCaseResult', testCaseResult);
   const userTestCaseResponse: UserTestCase = {
     userName,
     caseFails: [],
@@ -426,6 +421,7 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
     })
 
   const buildResult = await buildCpps(buildPaths);
+  console.log(userName, 'buildResult', buildResult);
 
   buildResult.forEach((res)=> {
     if(res.status === 'success') {
@@ -441,9 +437,7 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
       reason: res.reason
     });
   })
-
-  console.log('buildResult', buildResult);
-
+  console.log(userName, 'test start')
   const testResults = await Promise.all(buildResult.filter((build) => build.status === 'success')
     .map(build => {
       const caseName = build.path.split('/').at(-1);
@@ -463,7 +457,7 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
         results
       };
     }));
-
+  console.log(userName, 'test end');
   testResults.forEach(testResult => {
     const {caseName, results} = testResult;
 
@@ -481,7 +475,8 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
         reason: result.reason as unknown as string,
       })
     })
-  })
+  });
+  console.log(userName, 'testResult', testResults)
 
   res.status(200).send(userTestCaseResponse);
 })

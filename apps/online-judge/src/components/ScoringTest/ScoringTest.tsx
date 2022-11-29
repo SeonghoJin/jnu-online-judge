@@ -70,7 +70,7 @@ export const ScoringTest = () => {
 
   return (
     <>
-      <input id={"ta-multi"}/>
+      <textarea id={"ta-multi"}/>
       <button onClick={() => {
         const $taMulti = document.querySelector('#ta-multi') as unknown as HTMLInputElement;
         addTestCase($taMulti.value);
@@ -102,9 +102,9 @@ export const ScoringTest = () => {
           <br/>
           </>
       })}
-        input: <input id={`ta-multi-${name}-input`}/>
+        input: <textarea id={`ta-multi-${name}-input`}/>
         <br/>
-        output: <input id={`ta-multi-${name}-output`}/>
+        output: <textarea id={`ta-multi-${name}-output`}/>
         <br/>
         <button
           onClick={() => {

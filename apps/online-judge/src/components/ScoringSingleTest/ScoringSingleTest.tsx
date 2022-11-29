@@ -22,9 +22,9 @@ export const ScoringSingleTest = () => {
 
   return (
     <div>
-      input: <input id={`ta-input`}/>
+      input: <textarea id={`ta-input`}/>
       <br/>
-      output: <input id={`ta-output`}/>
+      output: <textarea id={`ta-output`}/>
       <br/>
       <button
         onClick={() => {
@@ -69,7 +69,7 @@ export const ScoringSingleTest = () => {
         })));
 
         setSingleTestCaseResult(testCaseResult.map((data) => data.data));
-      }} uppyId={'ta-multi'} uploadUrl={api.TA테스트여러개업로드} allowedFileTypes={['.zip']}/>
+      }} uppyId={'ta-multi-single'} uploadUrl={api.TA테스트여러개업로드} allowedFileTypes={['.zip']}/>
       {userSingleTestCaseResult.map((test) => {
         return <>
           <UserSingleTestCaseView userSingleTestCase={test}/>

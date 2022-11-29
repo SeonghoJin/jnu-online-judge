@@ -32,6 +32,7 @@ export const FileInput = ({onUploadSuccess, uppyId, uploadUrl, allowedFileTypes}
 
   useEffect(() => {
     uppyInstance.on('complete', (result) => {
+      console.log(result);
       if(result.failed.length > 0){
         onUploadSuccess(result.failed[0]);
         return;
@@ -43,7 +44,7 @@ export const FileInput = ({onUploadSuccess, uppyId, uploadUrl, allowedFileTypes}
     return () => {
       uppyInstance.off('complete', () => {});
     }
-  }, [onUploadSuccess, uppyInstance]);
+  }, [uppyInstance]);
 
 
   return <Dashboard
