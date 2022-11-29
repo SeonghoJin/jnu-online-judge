@@ -5,3 +5,5 @@ export * from './lib/RunMultipleTestCaseResponse';
 export * from './lib/UploadTAMultipleResponse';
 export * from './lib/RunTaMultipleTestCaseResponse';
 export * from './lib/RunTaMultipleTestCaseRequest';
+export * from './lib/RunTaSingleTestCaseRequest';
+export * from './lib/RunTaSingleTestCaseResponse';

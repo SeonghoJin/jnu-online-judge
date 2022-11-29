@@ -1,4 +1,4 @@
-type IO = {
+export type IO = {
   input: string;
   output: string;
   id: string;

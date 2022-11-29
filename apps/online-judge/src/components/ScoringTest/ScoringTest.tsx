@@ -68,10 +68,6 @@ export const ScoringTest = () => {
     })
   }
 
-  useEffect(() => {
-    console.log(testCases)
-  }, [testCases])
-
   return (
     <>
       <input id={"ta-multi"}/>
@@ -149,6 +145,7 @@ export const ScoringTest = () => {
         return <div key={result.userName}>
           <br/>
           <UserTestCaseView userTestCase={result} testCaseCount={testCases.length}/>
+          ------------------------------------------------------------
           <br/>
         </div>
       })}

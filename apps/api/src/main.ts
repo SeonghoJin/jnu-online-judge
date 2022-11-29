@@ -14,7 +14,7 @@ import {
   BuildResult,
   BuildSuccess,
   Fail, FailOrSuccess,
-  RunTaMultipleTestCaseRequest,
+  RunTaMultipleTestCaseRequest, RunTaSingleTestCaseRequest, RunTaSingleTestCaseResponse,
   Success,
   TestCase, UserTestCase
 } from "@online-judge/domain";
@@ -87,14 +87,14 @@ const buildCpp = async (folderPath: string): Promise<BuildResult> => {
 
   if(result.hasError) {
     return {
-      result: 'fail',
+      status: 'fail',
       path: folderPath,
       reason: (result.err as {stderr: string}).stderr,
     }
   }
 
   return {
-    result: 'success',
+    status: 'success',
     path: folderPath
   };
 }
@@ -136,14 +136,14 @@ app.post("/"+api.테스트하나업로드, async (req, res) => {
 
   const build = await buildCpp(uploadFolderPath);
 
-  if(build.result === 'fail'){
+  if(build.status === 'fail'){
     res.status(200).send({
-      reason: build.reason
+      reason: build.status
     });
     return;
   }
 
-  if(build.result === 'success'){
+  if(build.status === 'success'){
     res.status(201).send({
       resourceId
     });
@@ -157,14 +157,14 @@ app.post(`/${api.빌드여러개}`, async (req, res) => {
 
   const buildResults = await buildCpps(folderPaths);
 
-  const fails = buildResults.filter(({result}) => result === 'fail')
+  const fails = buildResults.filter(({status}) =>  status === 'fail')
     .map((result) => ({
       ...result,
       path: undefined,
       resourceId: result.path.split('/').at(-1)
     }));
 
-  const successes = buildResults.filter(({result}) => result === 'success')
+  const successes = buildResults.filter(({status}) => status === 'success')
     .map((result) => ({
       resourceId: result.path.split('/').at(-1)
     }));
@@ -240,15 +240,15 @@ const runTestCase = async (params : {
   input: string;
   output: string;
   resourceId: string;
-}) => {
+}): Promise<FailOrSuccess> => {
 
   const result = await run(`${params.exeFile} ${params.input} << EOF`);
 
   if(result.hasError || result?.result.stderr !== ''){
     return {
       status: 'fail',
-      reason: result?.result.stderr ?? ''
-    } as const;
+      reason: result?.result.stderr.toString() ?? ''
+    } ;
   }
 
   const target = formatTestCase(result.result.stdout.toString());
@@ -260,13 +260,13 @@ const runTestCase = async (params : {
       info: `${params.resourceId} success`,
       target,
       answer,
-    } as const;
+    };
   }
 
   return {
     status : 'fail',
     reason: `not match path=${params.resourceId} \n\ntarget=${target}\nanswer=${answer}`
-  } as const;
+  };
 }
 
 app.post('/' + api.테스트하나, async (req, res) => {
@@ -303,6 +303,7 @@ app.post('/' +api.테스트여러개, async (req, res) => {
 
 export const unzipUserAssignment = async (userAssignmentFolderPath: string) => {
   const [zipFileName] = await readdir(userAssignmentFolderPath);
+  console.log(`${userAssignmentFolderPath}/${zipFileName}`)
   const zipFile = new AdmZip(`${userAssignmentFolderPath}/${zipFileName}`);
 
   const resourceId = Date.now();
@@ -330,6 +331,59 @@ export const checkTestCasesUserAssignment = async (params: {userTestCasesFolderP
     } as const;
   });
 }
+
+app.post('/' + api.TA테스트하나유저하나, async (req, res) => {
+  const {folderName, ios, userName} = req.body as RunTaSingleTestCaseRequest;
+
+  const userAssignmentPath = `${rootPath}/static/${folderName}`;
+  console.log(userAssignmentPath);
+  try {
+
+  } catch (e) {
+
+  }
+
+  const {err, hasError, result: extractPath} = await makeTry(unzipUserAssignment)(userAssignmentPath);
+
+  if(hasError){
+    const response: RunTaSingleTestCaseResponse = {
+      userName,
+      buildResult: {
+        status: 'fail',
+        reason: err as string
+      }
+    }
+
+    return res.status(200).send(response);
+  }
+
+  const buildResult = await buildCpp(extractPath);
+
+  if(buildResult.status === 'fail') {
+    const response: RunTaSingleTestCaseResponse = {
+      userName,
+      buildResult
+    };
+
+    return res.status(200).send(response);
+  }
+
+  const buildPath = `${buildResult.path}/build`;
+
+  const runResult = await runTestCases({
+    exeFile: buildPath,
+    ios
+  });
+
+  const response: RunTaSingleTestCaseResponse = {
+    userName,
+    buildResult,
+    testResult: runResult
+  }
+
+  return res.status(200).send(response);
+  res.status(200).send();
+})
 
 app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
   const {userName, folderName, testCases} = req.body as RunTaMultipleTestCaseRequest;
@@ -374,7 +428,7 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
   const buildResult = await buildCpps(buildPaths);
 
   buildResult.forEach((res)=> {
-    if(res.result === 'success') {
+    if(res.status === 'success') {
       userTestCaseResponse.buildSuccesses.push({
         caseName: res.path.split('/').at(-1),
         info: ''
@@ -390,7 +444,7 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
 
   console.log('buildResult', buildResult);
 
-  const testResults = await Promise.all(buildResult.filter((build) => build.result === 'success')
+  const testResults = await Promise.all(buildResult.filter((build) => build.status === 'success')
     .map(build => {
       const caseName = build.path.split('/').at(-1);
       return {

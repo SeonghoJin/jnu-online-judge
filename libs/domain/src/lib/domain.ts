@@ -1,10 +1,11 @@
-export type ScoreView = 'multi' | 'single' | 'ta-score';
+export type ScoreView = 'multi' | 'single' | 'ta-score' | 'ta-score-single';
 export const ScoreViewNaming: {
   [P in ScoreView] : string;
 } = {
   multi: "테스트 여러개",
   single: "테스트 한개",
-  "ta-score": "TA 채점"
+  "ta-score": "TA 채점",
+  "ta-score-single": "TA 하나 채점",
 } as const;
 
 export const isScoreViewType = (value: unknown) : value is ScoreView => {
@@ -12,7 +13,7 @@ export const isScoreViewType = (value: unknown) : value is ScoreView => {
     return false;
   }
 
-  return value === 'multi' || value === 'single' || value === 'ta-score';
+  return value === 'multi' || value === 'single' || value === 'ta-score' || value === 'ta-score-single';
 }
 
 export type UploadMultiTestResponse = {
@@ -27,12 +28,12 @@ export type BuildRequest = {
 }
 
 export type BuildSuccess = {
-  result: 'success',
+  status: 'success',
   path: string;
 }
 
 export type BuildFail = {
-  result: 'fail'
+  status: 'fail'
  reason: string;
  path: string;
 }
@@ -85,6 +86,8 @@ export type Fail = {
 export type Success = {
   status: 'success'
   info?: string;
+  target?: string;
+  answer?: string;
 }
 
 export type FailOrSuccess = Fail | Success;

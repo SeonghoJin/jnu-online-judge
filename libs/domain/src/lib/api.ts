@@ -7,4 +7,6 @@ export const api = {
   '테스트하나': 'test/single',
   '테스트여러개': 'test/multi',
   'TA테스트여러개유저하나': '/test/ta/user',
+  'TA테스트하나유저하나': '/test/ta/user/single',
+
 }

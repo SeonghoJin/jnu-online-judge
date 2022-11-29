@@ -3,7 +3,7 @@ import {makeTry} from "make-try";
 import {
   api,
   MultiTestBuildRequest,
-  MultiTestBuildResponse,
+  MultiTestBuildResponse, RunTaSingleTestCaseRequest, RunTaSingleTestCaseResponse,
   SingleTestIORequest,
   SingleTestIOResponse
 } from "@online-judge/domain";
@@ -41,6 +41,10 @@ export class ApiService {
 
   runTaMultiTestCases = async (params: RunTaMultipleTestCaseRequest) => {
     return await this.httpService.post<RunTaMultipleTestCaseResponse>(`http://localhost:3333/${api.TA테스트여러개유저하나}`, params)
+  }
+
+  runTaSingleTestCase = async (params: RunTaSingleTestCaseRequest) => {
+    return await this.httpService.post<RunTaSingleTestCaseResponse>(`http://localhost:3333/${api.TA테스트하나유저하나}`, params);
   }
 }
 
