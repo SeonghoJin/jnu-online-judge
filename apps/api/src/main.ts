@@ -10,15 +10,13 @@ import * as fileUpload from 'express-fileupload';
 import * as morgan from 'morgan';
 import {UploadedFile} from "express-fileupload";
 import {
-  BuildFail,
   BuildResult,
-  BuildSuccess,
   Fail, FailOrSuccess,
   RunTaMultipleTestCaseRequest, RunTaSingleTestCaseRequest, RunTaSingleTestCaseResponse,
   Success,
   TestCase, UserTestCase
 } from "@online-judge/domain";
-import {mkdir, readdir, rename, writeFile} from 'fs/promises';
+import {mkdir, readdir, rename, writeFile, stat} from 'fs/promises';
 import {makeTry} from "make-try";
 import {promisify} from "util";
 import {exec} from "child_process";
@@ -74,7 +72,7 @@ const buildCpp = async (folderPath: string): Promise<BuildResult> => {
 
   const compiler = 'g++';
   const buildTargetName = `${folderPath}/build`;
-  const args = `-o ${buildTargetName} -std=c++14`;
+  const args = `-o ${buildTargetName} -std=c++20`;
 
   const buildingFiles = files.filter(file => validateCpp(file))
     .map(file => {
@@ -249,7 +247,7 @@ const runTestCase = async (params : {
   if(result.hasError || result?.result.stderr !== ''){
     return {
       status: 'fail',
-      reason: result?.result?.stderr?.toString() ?? ''
+      reason: result?.result?.stderr?.toString() + '\n' + result?.err ?? ''
     } ;
   }
 
@@ -306,17 +304,26 @@ app.post('/' +api.테스트여러개, async (req, res) => {
 export const unzipUserAssignment = async (userAssignmentFolderPath: string) => {
   const [zipFileName] = await readdir(userAssignmentFolderPath);
   const zipFile = new AdmZip(`${userAssignmentFolderPath}/${zipFileName}`);
-
   const resourceId = Date.now();
-  const extractPath = `${rootPath}/static/${resourceId}${zipFileName}` ;
+  const extractPath = `${rootPath}/static/${resourceId}${zipFileName}`;
 
   zipFile.extractAllTo(extractPath);
+
+  const inner = await readdir(extractPath);
+
+  if(inner.length === 1) {
+    if((await stat(extractPath)).isDirectory()){
+      return `${extractPath}/${inner[0]}`
+    }
+  }
 
   return extractPath;
 }
 
 export const checkTestCasesUserAssignment = async (params: {userTestCasesFolderPath: string, testCases: TestCase[]})=> {
   const testCasePaths = await readdir(params.userTestCasesFolderPath);
+  console.log('check test case')
+  console.log(params.userTestCasesFolderPath, testCasePaths);
 
   return params.testCases.map(testCase => testCase.name).map(testCaseName => {
     if(testCasePaths.includes(testCaseName))  {
@@ -376,7 +383,6 @@ app.post('/' + api.TA테스트하나유저하나, async (req, res) => {
   }
 
   return res.status(200).send(response);
-  res.status(200).send();
 })
 
 app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
@@ -385,9 +391,11 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
   console.log(userName + 'start');
 
   const userAssignmentPath = `${rootPath}/static/${folderName}`;
+  console.log(userName, userAssignmentPath);
   const testCasesFolderPath = await unzipUserAssignment(userAssignmentPath);
+  console.log(userName, testCasesFolderPath);
   const testCaseResult = await checkTestCasesUserAssignment({
-    userTestCasesFolderPath: testCasesFolderPath, testCases
+      userTestCasesFolderPath: testCasesFolderPath, testCases
   });
   console.log(userName, 'testCaseResult', testCaseResult);
   const userTestCaseResponse: UserTestCase = {

@@ -108,8 +108,10 @@ export const ScoringTest = () => {
         <br/>
         <button
           onClick={() => {
-            const $input = document.querySelector(`#ta-multi-${name}-input`) as unknown as HTMLInputElement;
-            const $output = document.querySelector(`#ta-multi-${name}-output`) as unknown as HTMLInputElement;
+            const $input = document.querySelector(`#ta-multi-${name}-input`) as unknown as HTMLTextAreaElement;
+            const $output = document.querySelector(`#ta-multi-${name}-output`) as unknown as HTMLTextAreaElement;
+            console.log($input);
+            console.log($output);
 
             addTestCaseIO({
               testCaseName: name,
