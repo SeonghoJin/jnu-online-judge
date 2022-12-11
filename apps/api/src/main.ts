@@ -26,17 +26,28 @@ export const moveFile = rename;
 import * as AdmZip from 'adm-zip';
 import { RunMultipleTestCaseRequest } from '@online-judge/domain';
 import { RunMultipleTestCaseResponse } from '@online-judge/domain';
+import * as asyncify from 'express-asyncify'
+import {Express} from "express";
+
 export const run = makeTry(promisify(exec));
 
-const app = express();
 const rootPath = process.cwd();
+const app = asyncify(express()) as Express;
 
 app.use(express.json());
 app.use('*', cors());
 app.use(morgan('combined'));
 app.use(fileUpload({
-  tempFileDir : '/upload/'
+  tempFileDir: '/upload/'
 }));
+
+app.get('/error', async () => {
+  throw new Error("hello world");
+})
+
+app.get('/ok', async (req, res) => {
+  res.sendStatus(200);
+})
 
 export const isAssignSubmissionFile = (filename: string) => {
   return filename.includes('_assignsubmission_file_');
@@ -52,15 +63,15 @@ export const removeHangul = (value: string) => {
 
 const validateCpp = (filename: string) => {
   const ext = filename.split('.').at(-1) ?? '';
-  if(ext === 'cpp'){
+  if (ext === 'cpp') {
     return true;
   }
 
-  if(ext === 'c'){
+  if (ext === 'c') {
     return true;
   }
 
-  if(ext === 'hpp') {
+  if (ext === 'hpp') {
     return true;
   }
 
@@ -83,11 +94,11 @@ const buildCpp = async (folderPath: string): Promise<BuildResult> => {
 
   const result = await run(command);
 
-  if(result.hasError) {
+  if (result.hasError) {
     return {
       status: 'fail',
       path: folderPath,
-      reason: (result.err as {stderr: string}).stderr,
+      reason: (result.err as { stderr: string }).stderr,
     }
   }
 
@@ -101,14 +112,14 @@ const buildCpps = async (folderPaths: string[]) => {
   return await Promise.all(folderPaths.map(folderPath => buildCpp(folderPath)));
 }
 
-app.post("/"+api.테스트하나업로드, async (req, res) => {
+app.post("/" + api.테스트하나업로드, async (req, res) => {
 
-  if(!req.files || Object.keys(req.files).length === 0){
+  if (!req.files || Object.keys(req.files).length === 0) {
     return res.status(400).send('No files were uploaded.');
   }
 
   const files = (() => {
-    if(Array.isArray(req.files.file)) {
+    if (Array.isArray(req.files.file)) {
       return req.files.file;
     }
 
@@ -134,14 +145,14 @@ app.post("/"+api.테스트하나업로드, async (req, res) => {
 
   const build = await buildCpp(uploadFolderPath);
 
-  if(build.status === 'fail'){
+  if (build.status === 'fail') {
     res.status(200).send({
       reason: build.status
     });
     return;
   }
 
-  if(build.status === 'success'){
+  if (build.status === 'success') {
     res.status(201).send({
       resourceId
     });
@@ -149,13 +160,13 @@ app.post("/"+api.테스트하나업로드, async (req, res) => {
 });
 
 app.post(`/${api.빌드여러개}`, async (req, res) => {
-  const { folderNames } = req.body;
+  const {folderNames} = req.body;
 
   const folderPaths = folderNames.map((folderName) => `${rootPath}/static/${folderName}`) as string[];
 
   const buildResults = await buildCpps(folderPaths);
 
-  const fails = buildResults.filter(({status}) =>  status === 'fail')
+  const fails = buildResults.filter(({status}) => status === 'fail')
     .map((result) => ({
       ...result,
       path: undefined,
@@ -173,9 +184,9 @@ app.post(`/${api.빌드여러개}`, async (req, res) => {
   });
 })
 
-app.post("/"+api.테스트여러개업로드, async (req, res) => {
+app.post("/" + api.테스트여러개업로드, async (req, res) => {
 
-  if(!req.files || Object.keys(req.files).length === 0){
+  if (!req.files || Object.keys(req.files).length === 0) {
     return res.status(400).send('No files were uploaded.');
   }
 
@@ -183,7 +194,7 @@ app.post("/"+api.테스트여러개업로드, async (req, res) => {
   const resourceId = Date.now();
   const uploadFolderPath = `${rootPath}/static/${resourceId}`;
 
-  if("data" in file) {
+  if ("data" in file) {
     const zipFile = new AdmZip(file.data);
     zipFile.extractAllTo(uploadFolderPath, true);
     const testCaseFolderPaths = await readdir(uploadFolderPath);
@@ -201,9 +212,9 @@ app.post("/"+api.테스트여러개업로드, async (req, res) => {
     }));
 
     await Promise.all(
-      moveFolderInfos.map(({ oldPath, newPath}) =>
-      moveFile(oldPath, newPath)
-    ));
+      moveFolderInfos.map(({oldPath, newPath}) =>
+        moveFile(oldPath, newPath)
+      ));
 
     return res.status(200).send({
       resources
@@ -233,7 +244,7 @@ const runTestCases = async (params: {
   })));
 }
 
-const runTestCase = async (params : {
+const runTestCase = async (params: {
   exeFile: string;
   input: string;
   output: string;
@@ -244,17 +255,17 @@ const runTestCase = async (params : {
   const result = await run(`${params.exeFile} < ${writeInputFilePath}`);
   console.log(`${params.exeFile}`, 'command result', result);
 
-  if(result.hasError || result?.result.stderr !== ''){
+  if (result.hasError || result?.result.stderr !== '') {
     return {
       status: 'fail',
       reason: result?.result?.stderr?.toString() + '\n' + result?.err ?? ''
-    } ;
+    };
   }
 
   const target = formatTestCase(result.result.stdout.toString());
   const answer = formatTestCase(params.output);
 
-  if(target === answer) {
+  if (target === answer) {
     return {
       status: 'success',
       info: `${params.resourceId} success`,
@@ -264,7 +275,7 @@ const runTestCase = async (params : {
   }
 
   return {
-    status : 'fail',
+    status: 'fail',
     reason: `not match path=${params.resourceId} \n\ntarget=${target}\nanswer=${answer}`
   };
 }
@@ -283,7 +294,7 @@ app.post('/' + api.테스트하나, async (req, res) => {
   res.status(200).send(testCaseResult);
 })
 
-app.post('/' +api.테스트여러개, async (req, res) => {
+app.post('/' + api.테스트여러개, async (req, res) => {
   const requests = req.body as RunMultipleTestCaseRequest;
 
   const testResult = await Promise.all(requests.map(request => runTestCase({
@@ -311,8 +322,8 @@ export const unzipUserAssignment = async (userAssignmentFolderPath: string) => {
 
   const inner = await readdir(extractPath);
 
-  if(inner.length === 1) {
-    if((await stat(extractPath)).isDirectory()){
+  if (inner.length === 1) {
+    if ((await stat(extractPath)).isDirectory()) {
       return `${extractPath}/${inner[0]}`
     }
   }
@@ -320,13 +331,13 @@ export const unzipUserAssignment = async (userAssignmentFolderPath: string) => {
   return extractPath;
 }
 
-export const checkTestCasesUserAssignment = async (params: {userTestCasesFolderPath: string, testCases: TestCase[]})=> {
+export const checkTestCasesUserAssignment = async (params: { userTestCasesFolderPath: string, testCases: TestCase[] }) => {
   const testCasePaths = await readdir(params.userTestCasesFolderPath);
   console.log('check test case')
   console.log(params.userTestCasesFolderPath, testCasePaths);
 
   return params.testCases.map(testCase => testCase.name).map(testCaseName => {
-    if(testCasePaths.includes(testCaseName))  {
+    if (testCasePaths.includes(testCaseName)) {
       return {
         status: 'success',
         caseName: testCaseName,
@@ -346,7 +357,7 @@ app.post('/' + api.TA테스트하나유저하나, async (req, res) => {
 
   const {err, hasError, result: extractPath} = await makeTry(unzipUserAssignment)(userAssignmentPath);
 
-  if(hasError){
+  if (hasError) {
     const response: RunTaSingleTestCaseResponse = {
       userName,
       buildResult: {
@@ -360,7 +371,7 @@ app.post('/' + api.TA테스트하나유저하나, async (req, res) => {
 
   const buildResult = await buildCpp(extractPath);
 
-  if(buildResult.status === 'fail') {
+  if (buildResult.status === 'fail') {
     const response: RunTaSingleTestCaseResponse = {
       userName,
       buildResult
@@ -395,7 +406,7 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
   const testCasesFolderPath = await unzipUserAssignment(userAssignmentPath);
   console.log(userName, testCasesFolderPath);
   const testCaseResult = await checkTestCasesUserAssignment({
-      userTestCasesFolderPath: testCasesFolderPath, testCases
+    userTestCasesFolderPath: testCasesFolderPath, testCases
   });
   console.log(userName, 'testCaseResult', testCaseResult);
   const userTestCaseResponse: UserTestCase = {
@@ -408,8 +419,8 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
     testFails: []
   };
 
-  testCaseResult.forEach(({status, caseName})=> {
-    if(status === 'success') {
+  testCaseResult.forEach(({status, caseName}) => {
+    if (status === 'success') {
       userTestCaseResponse.caseSuccesses.push({
         caseName,
         info: ''
@@ -431,8 +442,8 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
   const buildResult = await buildCpps(buildPaths);
   console.log(userName, 'buildResult', buildResult);
 
-  buildResult.forEach((res)=> {
-    if(res.status === 'success') {
+  buildResult.forEach((res) => {
+    if (res.status === 'success') {
       userTestCaseResponse.buildSuccesses.push({
         caseName: res.path.split('/').at(-1),
         info: ''
@@ -470,7 +481,7 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
     const {caseName, results} = testResult;
 
     results.forEach(result => {
-      if(result.status === 'success'){
+      if (result.status === 'success') {
         userTestCaseResponse.testSuccesses.push({
           caseName,
           info: ''
@@ -491,7 +502,7 @@ app.post('/' + api.TA테스트여러개유저하나, async (req, res) => {
 
 app.post('/' + api.TA테스트여러개업로드, async (req, res) => {
 
-  if(!req.files || Object.keys(req.files).length === 0){
+  if (!req.files || Object.keys(req.files).length === 0) {
     return res.status(400).send('No files were uploaded.');
   }
 
@@ -499,7 +510,7 @@ app.post('/' + api.TA테스트여러개업로드, async (req, res) => {
   const resourceId = Date.now();
   const uploadFolderPath = `${rootPath}/static/${resourceId}`;
 
-  if("data" in file) {
+  if ("data" in file) {
     const zipFile = new AdmZip(file.data);
     zipFile.extractAllTo(uploadFolderPath, true);
     const testCaseFolderPaths = (await readdir(uploadFolderPath)).filter(isAssignSubmissionFile);
@@ -517,7 +528,7 @@ app.post('/' + api.TA테스트여러개업로드, async (req, res) => {
     }));
 
     await Promise.all(
-      moveFolderInfos.map(({ oldPath, newPath}) =>
+      moveFolderInfos.map(({oldPath, newPath}) =>
         moveFile(oldPath, newPath)
       ));
 
@@ -539,3 +550,4 @@ const server = app.listen(port, () => {
 });
 
 server.on('error', console.error);
+
